@@ -13,5 +13,9 @@ services:
         sync: false   # Render asks you for the value; it is never stored in git
       - key: APP_PASSWORD
         sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
       - key: MAX_MESSAGES_PER_HOUR
         value: "30"

@@ -1,3 +1,5 @@
 # Web chatbot (what the hosting service installs)
 anthropic
 python-dotenv
+edge-tts            # voice output (English + Khmer neural voices)
+SpeechRecognition   # voice input (English + Khmer)

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Chatbot</title>
+<title>PPCBank Loan Assistant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;600&display=swap" rel="stylesheet">
@@ -126,6 +126,15 @@
   .msg.bot  { align-self: flex-start; background: var(--bot-bubble); border-bottom-left-radius: 4px; }
   .msg.user { align-self: flex-end; background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 4px; }
   .msg.error { color: var(--error); }
+  .notice {
+    align-self: center;
+    background: #2aabee;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
 
   .empty {
     margin: auto;
@@ -219,7 +228,7 @@
     <header>
       <div class="avatar">AI</div>
       <div class="title">
-        <strong>AI Chatbot</strong>
+        <strong>PPCBank Loan Assistant</strong>
         <span id="status">Online</span>
       </div>
       <div class="lang" role="group" aria-label="Language">
@@ -251,7 +260,7 @@
 
     <div id="lock" hidden>
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      <strong>AI Chatbot</strong>
+      <strong>PPCBank Loan Assistant</strong>
       <p id="lock-text"></p>
       <form id="lock-form">
         <input id="lock-input" type="password" autocomplete="current-password" aria-label="Password">
@@ -279,31 +288,43 @@
 
   const TEXT = {
     "en-US": {
-      hello: "👋 Hi! Type or tap the mic to talk.",
+      hello: "👋 Hi! Ask me about PPCBank loans. Type or tap the mic to talk.",
+      leadSent: "✓ Your details were sent to a PPCBank loan officer",
       placeholder: "Type a message...",
       online: "Online",
       typing: "Typing...",
       listening: "Listening... tap the mic to stop",
       speaking: "Speaking...",
+      recognizing: "Recognizing your voice...",
       micTitle: "Speak in English",
-      noMic: "Microphone access was blocked. Allow it in the browser address bar.",
-      noRecognition: "Voice input needs Chrome or Edge.",
-      noVoice: "",
+      noMic: "Microphone access is blocked. Click the lock icon in the address bar and allow the microphone (on Mac also check System Settings → Privacy & Security → Microphone).",
+      micMissing: "No microphone found.",
+      needsHttps: "Voice needs a secure page: open it at http://localhost or an https:// address.",
+      noSpeech: "I didn't hear anything - tap the mic and try again.",
+      sttFailed: "Couldn't recognize your voice",
+      ttsFailed: "Couldn't play the voice reply",
+      tapForSound: "Tap anywhere to turn on sound.",
       lockText: "Enter the password to start chatting.",
       wrongPassword: "Wrong password.",
       limit: "You've sent a lot of messages. Please wait a while and try again.",
     },
     "km-KH": {
-      hello: "👋 សួស្តី! វាយអក្សរ ឬចុចមីក្រូហ្វូនដើម្បីនិយាយ។",
+      hello: "👋 សួស្តី! សួរខ្ញុំអំពីកម្ចីរបស់ PPCBank។ វាយអក្សរ ឬចុចមីក្រូហ្វូនដើម្បីនិយាយ។",
+      leadSent: "✓ ព័ត៌មានរបស់អ្នកត្រូវបានផ្ញើទៅមន្ត្រីឥណទាន PPCBank",
       placeholder: "វាយសារ...",
       online: "អនឡាញ",
       typing: "កំពុងសរសេរ...",
       listening: "កំពុងស្តាប់... ចុចមីក្រូហ្វូនដើម្បីបញ្ឈប់",
       speaking: "កំពុងនិយាយ...",
+      recognizing: "កំពុងស្គាល់សំឡេងរបស់អ្នក...",
       micTitle: "និយាយជាភាសាខ្មែរ",
-      noMic: "មីក្រូហ្វូនត្រូវបានបិទ។ សូមអនុញ្ញាតនៅក្នុងកម្មវិធីរុករក។",
-      noRecognition: "ការបញ្ចូលសំឡេងត្រូវការ Chrome ឬ Edge។",
-      noVoice: "No Khmer voice on this device - replies are shown as text only.",
+      noMic: "មីក្រូហ្វូនត្រូវបានបិទ។ ចុចរូបសោនៅរបារអាសយដ្ឋាន ហើយអនុញ្ញាតមីក្រូហ្វូន (នៅលើ Mac សូមពិនិត្យ System Settings → Privacy & Security → Microphone)។",
+      micMissing: "រកមិនឃើញមីក្រូហ្វូនទេ។",
+      needsHttps: "សំឡេងត្រូវការទំព័រសុវត្ថិភាព៖ សូមបើកតាម http://localhost ឬអាសយដ្ឋាន https://។",
+      noSpeech: "ខ្ញុំមិនបានឮអ្វីទេ - សូមចុចមីក្រូហ្វូនហើយព្យាយាមម្តងទៀត។",
+      sttFailed: "មិនអាចស្គាល់សំឡេងរបស់អ្នកបានទេ",
+      ttsFailed: "មិនអាចចាក់សំឡេងឆ្លើយតបបានទេ",
+      tapForSound: "ចុចកន្លែងណាមួយដើម្បីបើកសំឡេង។",
       lockText: "សូមបញ្ចូលពាក្យសម្ងាត់ដើម្បីចាប់ផ្តើមជជែក។",
       wrongPassword: "ពាក្យសម្ងាត់មិនត្រឹមត្រូវ។",
       limit: "អ្នកបានផ្ញើសារច្រើនពេក។ សូមរង់ចាំបន្តិចហើយព្យាយាមម្តងទៀត។",
@@ -343,7 +364,8 @@
 
   function setStatus(key) {
     if (key) statusNote = "";
-    statusEl.textContent = statusNote || t(key || (busy ? "typing" : listening ? "listening" : "online"));
+    const state = busy ? "typing" : recognizing ? "recognizing" : listening ? "listening" : "online";
+    statusEl.textContent = statusNote || t(key || state);
   }
 
   function noteStatus(text) {
@@ -364,6 +386,15 @@
     return el;
   }
 
+  // Status line in the chat, e.g. "details sent to a loan officer".
+  function addNotice(text) {
+    const el = document.createElement("div");
+    el.className = "notice";
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    scrollDown();
+  }
+
   function scrollDown() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -371,7 +402,7 @@
   function setBusy(value) {
     busy = value;
     sendBtn.disabled = value;
-    micBtn.disabled = value;
+    micBtn.disabled = value || recognizing;
     setStatus();
   }
 
@@ -383,7 +414,8 @@
     setBusy(true);
     const replyLang = lang;
 
-    let reply = "";
+    let raw = "", reply = "";
+    let leadShown = false;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -399,12 +431,21 @@
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        reply += decoder.decode(value, { stream: true });
+        raw += decoder.decode(value, { stream: true });
+        // Events arrive inline as \x01name\x02; take them out of the text.
+        const events = [...raw.matchAll(/\x01([^\x02]*)\x02/g)].map((m) => m[1]);
+        if (events.includes("lead_sent") && !leadShown) {
+          leadShown = true;
+          addNotice(t("leadSent"));
+        }
+        reply = raw.replace(/\x01[^\x02]*\x02/g, "");
+        const partial = reply.indexOf("\x01");
+        if (partial !== -1) reply = reply.slice(0, partial);
         const errAt = reply.indexOf("\x00");
         if (errAt !== -1) {
           throw new Error(reply.slice(errAt + 1));
         }
-        botEl.textContent = reply;
+        if (reply) botEl.textContent = reply;
         scrollDown();
       }
       if (!reply) botEl.textContent = "(no reply)";
@@ -458,65 +499,123 @@
   });
 
   // ------------------------------------------------------------ voice input
+  // The browser records the microphone and the server turns it into text
+  // (/api/stt). This works in every browser and supports Khmer, unlike the
+  // browser's own SpeechRecognition, which only works fully in Chrome/Edge.
 
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognition = null;
+  const STT_RATE = 16000;
+  const SILENCE_STOP_MS = 1500;   // stop after this much quiet once speech was heard
+  const NO_SPEECH_STOP_MS = 8000; // give up if nothing is said
+  const MAX_RECORD_MS = 30000;
+
   let listening = false;
+  let recognizing = false;
+  let recorder = null;   // { stream, ctx, chunks, rate, ... } while recording
 
   micBtn.addEventListener("click", () => {
-    if (!Recognition) { noteStatus(t("noRecognition")); return; }
+    unlockAudio();
     listening ? stopListening(true) : startListening();
   });
 
-  function startListening() {
-    if (busy) return;
-    stopSpeaking();
-    recognition = new Recognition();
-    recognition.lang = lang;
-    recognition.interimResults = true;
-    recognition.continuous = false;   // stop after the user pauses
-
-    const before = input.value ? input.value.trimEnd() + " " : "";
-    let finalText = "";
-
-    recognition.onresult = (e) => {
-      let interim = "";
-      finalText = "";
-      for (const r of e.results) {
-        if (r.isFinal) finalText += r[0].transcript;
-        else interim += r[0].transcript;
-      }
-      input.value = before + finalText + interim;
-      autoResize();
-    };
-    recognition.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") noteStatus(t("noMic"));
-      else if (e.error !== "no-speech" && e.error !== "aborted") noteStatus("Voice error: " + e.error);
-    };
-    recognition.onend = () => {
-      const wasListening = listening;
-      setListening(false);
-      recognition = null;
-      // Auto-send what was heard when the user stops talking.
-      if (wasListening && input.value.trim()) form.requestSubmit();
-    };
-
-    try {
-      recognition.start();
-      setListening(true);
-    } catch {
-      setListening(false);
-    }
+  function voiceError(text) {
+    addMessage("bot error", "⚠️ " + text);
   }
 
-  // send=true: the user tapped the mic to finish, so send what was heard.
+  async function startListening() {
+    if (busy || recognizing || listening) return;
+    stopSpeaking();
+    if (!navigator.mediaDevices?.getUserMedia) {
+      voiceError(t("needsHttps"));
+      return;
+    }
+    setListening(true);
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (err) {
+      setListening(false);
+      voiceError(err.name === "NotAllowedError" || err.name === "SecurityError" ? t("noMic") : t("micMissing"));
+      return;
+    }
+    if (!listening) { stream.getTracks().forEach((tr) => tr.stop()); return; }  // cancelled meanwhile
+
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") await ctx.resume();
+    const source = ctx.createMediaStreamSource(stream);
+    const processor = ctx.createScriptProcessor(4096, 1, 1);
+    const mute = ctx.createGain();
+    mute.gain.value = 0;
+    source.connect(processor);
+    processor.connect(mute);
+    mute.connect(ctx.destination);  // processor only runs when connected
+
+    const started = performance.now();
+    const rec = recorder = { stream, ctx, processor, chunks: [], rate: ctx.sampleRate,
+                             heardSpeech: false, lastLoud: started, noise: 0.004 };
+
+    processor.onaudioprocess = (e) => {
+      if (recorder !== rec) return;
+      const data = new Float32Array(e.inputBuffer.getChannelData(0));
+      rec.chunks.push(data);
+
+      // Simple voice-activity detection: loud = well above the background noise.
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / data.length);
+      const now = performance.now();
+      if (rms > Math.max(0.015, rec.noise * 3)) {
+        rec.heardSpeech = true;
+        rec.lastLoud = now;
+      } else if (!rec.heardSpeech) {
+        rec.noise = rec.noise * 0.9 + rms * 0.1;  // learn the room's noise level
+      }
+
+      if (rec.heardSpeech && now - rec.lastLoud > SILENCE_STOP_MS) stopListening(true);
+      else if (!rec.heardSpeech && now - started > NO_SPEECH_STOP_MS) stopListening(false);
+      else if (now - started > MAX_RECORD_MS) stopListening(true);
+    };
+  }
+
+  // send=true: transcribe what was recorded and send it; false: discard it.
   function stopListening(send = false) {
-    if (!recognition) return;
-    if (send) {
-      recognition.stop();     // keep the final words; onend sends them
-    } else {
-      listening = false;      // onend will not auto-send
-      recognition.abort();    // drop any late results
+    const rec = recorder;
+    if (!rec) { if (listening) setListening(false); return; }
+    recorder = null;
+    rec.processor.onaudioprocess = null;
+    rec.stream.getTracks().forEach((tr) => tr.stop());
+    rec.ctx.close().catch(() => {});
+    setListening(false);
+    if (send && rec.heardSpeech) transcribe(rec.chunks, rec.rate);
+    else if (send) noteStatus(t("noSpeech"));
+  }
+
+  async function transcribe(chunks, rate) {
+    const wav = encodeWav(downsample(chunks, rate, STT_RATE), STT_RATE);
+    const sttLang = lang;
+    recognizing = true;
+    micBtn.disabled = true;
+    setStatus();
+    try {
+      const res = await fetch("/api/stt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: await blobToBase64(wav), lang: sttLang, password }),
+      });
+      if (res.status === 401) { showLock(); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Server error " + res.status);
+      if (!data.text) { noteStatus(t("noSpeech")); return; }
+      input.value = (input.value.trim() ? input.value.trimEnd() + " " : "") + data.text;
+      autoResize();
+      form.requestSubmit();
+    } catch (err) {
+      voiceError(t("sttFailed") + " (" + (err.message || "network") + ")");
+    } finally {
+      recognizing = false;
+      micBtn.disabled = busy;
+      setStatus();
     }
   }
 
@@ -527,9 +626,70 @@
     setStatus();
   }
 
+  // Merge recorded chunks and resample to `outRate` (simple averaging).
+  function downsample(chunks, inRate, outRate) {
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const input = new Float32Array(total);
+    let offset = 0;
+    for (const c of chunks) { input.set(c, offset); offset += c.length; }
+    if (inRate === outRate) return input;
+    const ratio = inRate / outRate;
+    const out = new Float32Array(Math.floor(total / ratio));
+    for (let i = 0; i < out.length; i++) {
+      const start = Math.floor(i * ratio), end = Math.min(Math.floor((i + 1) * ratio), total);
+      let sum = 0;
+      for (let j = start; j < end; j++) sum += input[j];
+      out[i] = sum / Math.max(1, end - start);
+    }
+    return out;
+  }
+
+  // 16-bit mono PCM WAV.
+  function encodeWav(samples, rate) {
+    const buf = new ArrayBuffer(44 + samples.length * 2);
+    const v = new DataView(buf);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true); str(8, "WAVE");
+    str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, "data"); v.setUint32(40, samples.length * 2, true);
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Blob([buf], { type: "audio/wav" });
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(",")[1]);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+  }
+
   // ------------------------------------------------------------ voice output
+  // Replies are spoken with the server's neural voices (/api/tts), which include
+  // Khmer. Most devices have no Khmer voice, so the browser's own speech is only
+  // a fallback for English.
 
   let speakerOn = localStorageGet("speaker") !== "off";
+  const player = new Audio();
+  let speakToken = 0;        // bumped to cancel whatever is being spoken
+  let finishPlayback = null; // resolves the clip that is playing now
+  let audioUnlocked = false;
+
+  // Browsers (Safari especially) only allow sound that starts from a tap or key
+  // press. Playing a silent clip during the first one unlocks `player` for later.
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    player.src = URL.createObjectURL(encodeWav(new Float32Array(1600), 16000));
+    player.play().catch(() => { audioUnlocked = false; });
+  }
+  document.addEventListener("pointerdown", unlockAudio);
+  document.addEventListener("keydown", unlockAudio);
 
   function renderSpeaker() {
     speakerBtn.classList.toggle("on", speakerOn);
@@ -545,35 +705,107 @@
     renderSpeaker();
   });
 
-  function findVoice(code) {
-    const voices = speechSynthesis.getVoices();
-    const base = code.slice(0, 2).toLowerCase();
-    return voices.find((v) => v.lang.replace("_", "-") === code)
-        || voices.find((v) => v.lang.toLowerCase().startsWith(base));
+  // Split into pieces of a few sentences so the first one starts playing quickly.
+  function speechChunks(text) {
+    const clean = text.replace(/[*_#`>|~]+/g, " ").replace(/\s+/g, " ").trim();
+    const sentences = clean.match(/[^.!?។៕]+[.!?។៕]*\s*/g) || [clean];
+    const chunks = [];
+    let current = "";
+    for (let s of sentences) {
+      while (s.length > 300) {  // very long sentence: cut at a space if possible
+        let cut = s.lastIndexOf(" ", 300);
+        if (cut < 100) cut = 300;
+        chunks.push(s.slice(0, cut));
+        s = s.slice(cut);
+      }
+      if (current && (current + s).length > 250) { chunks.push(current); current = ""; }
+      current += s;
+    }
+    if (current.trim()) chunks.push(current);
+    return chunks.map((c) => c.trim()).filter(Boolean);
   }
 
-  function speak(text, code) {
-    if (!speakerOn || !("speechSynthesis" in window)) return;
-    const voice = findVoice(code);
-    if (!voice && code !== "en-US") {
-      noteStatus(TEXT[code].noVoice);
-      return;
-    }
-    stopSpeaking();
-    // Speak sentence by sentence; Chrome cuts off very long utterances.
-    const parts = (text.match(/[^.!?។៕\n]+[.!?។៕]*\s*/g) || [text]).filter((p) => p.trim());
-    parts.forEach((part, i) => {
-      const u = new SpeechSynthesisUtterance(part);
-      u.lang = code;
-      if (voice) u.voice = voice;
-      if (i === 0) u.onstart = () => setStatus("speaking");
-      if (i === parts.length - 1) u.onend = () => setStatus();
-      speechSynthesis.speak(u);
+  function fetchSpeech(text, code) {
+    const p = fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, lang: code, password }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Server error " + res.status);
+      }
+      return res.blob();
+    });
+    p.catch(() => {});  // a cancelled prefetch must not log an unhandled error
+    return p;
+  }
+
+  function playClip(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const done = () => {
+        player.onended = player.onerror = null;
+        finishPlayback = null;
+        URL.revokeObjectURL(url);
+      };
+      finishPlayback = () => { done(); resolve(); };
+      player.onended = () => { done(); resolve(); };
+      player.onerror = () => { done(); reject(new Error("could not play audio")); };
+      player.src = url;
+      player.play().catch((err) => { done(); reject(err); });
     });
   }
 
+  async function speak(text, code) {
+    if (!speakerOn) return;
+    stopSpeaking();
+    const token = ++speakToken;
+    const chunks = speechChunks(text);
+    if (!chunks.length) return;
+    setStatus("speaking");
+
+    let next = fetchSpeech(chunks[0], code);
+    for (let i = 0; i < chunks.length; i++) {
+      try {
+        const clip = await next;
+        if (token !== speakToken) return;
+        next = i + 1 < chunks.length ? fetchSpeech(chunks[i + 1], code) : null;
+        await playClip(clip);
+        if (token !== speakToken) return;
+      } catch (err) {
+        if (token !== speakToken) return;
+        if (err.name === "NotAllowedError") {
+          noteStatus(t("tapForSound"));
+        } else if (!browserSpeak(chunks.slice(i).join(" "), code)) {
+          voiceError(t("ttsFailed") + " (" + (err.message || "network") + ")");
+        }
+        break;
+      }
+    }
+    if (token === speakToken) setStatus();
+  }
+
+  // Fallback: the browser's built-in voice. Returns false if it has none for `code`.
+  function browserSpeak(text, code) {
+    if (!("speechSynthesis" in window)) return false;
+    const base = code.slice(0, 2);
+    const voice = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(base));
+    if (!voice) return false;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = code;
+    u.voice = voice;
+    u.onend = () => setStatus();
+    speechSynthesis.speak(u);
+    return true;
+  }
+
   function stopSpeaking() {
+    speakToken++;
+    player.pause();
+    if (finishPlayback) finishPlayback();
     if ("speechSynthesis" in window) speechSynthesis.cancel();
+    setStatus();
   }
 
   // Voices load asynchronously in some browsers.
@@ -624,7 +856,6 @@
 
   // ------------------------------------------------------------ start
 
-  if (!Recognition) micBtn.title = TEXT[lang].noRecognition;
   renderSpeaker();
   setLang(lang);
   checkPassword().then((ok) => { if (!ok) showLock(); });

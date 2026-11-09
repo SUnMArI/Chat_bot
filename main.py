@@ -17,62 +17,141 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
+import loan_tools
+
 # Load ANTHROPIC_API_KEY (and any other settings) from a .env file next to this script.
 load_dotenv(Path(__file__).with_name(".env"))
 
 MODEL = "claude-opus-5-5"
 SAMPLE_RATE = 16000
 
-SYSTEM_PROMPT = (
-    "You are a friendly, helpful conversational assistant. "
-    "Your replies may be read aloud by a text-to-speech engine, so write in "
-    "natural spoken sentences: keep answers concise, and avoid markdown, "
-    "tables, code blocks, and emoji unless the user explicitly asks for them."
-)
+SYSTEM_PROMPT = f"""You are the PPCBank Loan Assistant, a friendly assistant that helps customers \
+of Phnom Penh Commercial Bank (PPCBank) in Cambodia with loans. Customers talk to you in English \
+or Khmer, by typing or by voice.
+
+What you do:
+- Answer general questions about loans: common loan types (home, car, business, personal), how \
+the application process usually works, and the documents usually needed (ID card, proof of income, \
+bank statements, collateral documents such as a land title).
+- You do not have PPCBank's current interest rates, fees or product rules. Never state them as \
+facts. When a customer wants a payment figure, call estimate_monthly_payment with an illustrative \
+annual rate of {loan_tools.SAMPLE_ANNUAL_RATE}% (or a rate the customer gives), and say clearly that it is \
+an estimate and a loan officer will confirm the real rate.
+- When a customer wants to apply or be contacted, collect: full name, phone number, address \
+(village or sangkat, district or khan, province or city), loan type, amount and currency (USD or \
+KHR), term, and monthly income. Ask for a couple of missing details at a time, conversationally.
+- Before sending, read the details back in one short summary and ask the customer to confirm. \
+Only after they confirm, call send_loan_lead_to_telegram. Then tell them a loan officer will \
+contact them soon. Never promise that the loan will be approved.
+- If sending fails, apologise, say the details were not sent, and suggest trying again later or \
+calling the bank. Never claim a lead was sent unless the tool says it was.
+- Stay on banking and loan topics; politely steer other requests back.
+
+Style: your replies may be read aloud by a text-to-speech engine, so write natural spoken \
+sentences, keep answers concise, and avoid markdown, tables, code blocks and emoji. Reply in the \
+language the customer uses unless a system message says otherwise."""
+
+MAX_TOOL_ROUNDS = 5
 
 
 class Chatbot:
-    def __init__(self):
+    def __init__(self, source: str = "Terminal"):
         self.client = anthropic.Anthropic()
-        self.messages = []
+        self.source = source  # shown on Telegram leads, e.g. "Web chat"
+        self.reset()
 
     def reset(self):
         self.messages = []
+        self.language = None  # reply language currently in force
+        self.tool_context = {"source": self.source, "leads_sent": 0}
 
-    def ask(self, user_text: str, on_text=None, language: str | None = None) -> str:
-        """Send a user message, stream the reply, and return the full reply text.
+    def ask(self, user_text: str, on_text=None, language: str | None = None, on_event=None) -> str:
+        """Send a user message, run any tool calls, stream the reply, and return its text.
 
         If `language` is given (e.g. "Khmer"), Claude is asked to reply in it.
+        `on_event("lead_sent")` is called when a loan lead reaches Telegram.
+
+        The history is append-only: the top-level system prompt never changes, and a
+        language switch is added as a mid-conversation system message instead.
         """
-        system = SYSTEM_PROMPT
-        if language:
-            system += f" Always reply in {language}, even if the user writes in another language."
+        start = len(self.messages)
+        old_language = self.language
         self.messages.append({"role": "user", "content": user_text})
+        if language and language != self.language:
+            self.messages.append({"role": "system", "content": f"From now on, always reply in {language}, even if the customer writes in another language."})
+            self.language = language
+        self.tool_context["language"] = self.language
+
+        texts = []
+
+        def emit(t):
+            texts.append(t)
+            if on_text:
+                on_text(t)
+
+        rounds = 0
         try:
-            with self.client.beta.messages.stream(
-                model=MODEL,
-                max_tokens=64000,
-                system=system,
-                messages=self.messages,
-                output_config={"effort": "low"},
-                betas=["server-side-fallback-2026-07-01"],
-                fallbacks="default",
-            ) as stream:
-                for text in stream.text_stream:
-                    if on_text:
-                        on_text(text)
-                final = stream.get_final_message()
+            while True:
+                separator_needed = bool(texts)
+                try:
+                    with self.client.beta.messages.stream(
+                        model=MODEL,
+                        max_tokens=64000,
+                        system=SYSTEM_PROMPT,
+                        tools=loan_tools.TOOLS,
+                        messages=self.messages,
+                        output_config={"effort": "low"},
+                        betas=["server-side-fallback-2026-07-01"],
+                        fallbacks="default",
+                    ) as stream:
+                        for text in stream.text_stream:
+                            if separator_needed:
+                                emit(" ")
+                                separator_needed = False
+                            emit(text)
+                        final = stream.get_final_message()
+                except ValueError as e:
+                    # With eager_input_streaming the SDK raises ValueError for a tool
+                    # input it cannot parse at all.
+                    raise RuntimeError("The assistant sent a malformed tool call. Please try again.") from e
+
+                if final.stop_reason == "refusal":
+                    if rounds == 0:
+                        del self.messages[start:]
+                        self.language = old_language
+                    return "Sorry, I can't help with that one."
+
+                tool_uses = [b for b in final.content if b.type == "tool_use"]
+                if final.stop_reason != "tool_use" or not tool_uses:
+                    # Append the full content (not just text) so thinking blocks stay intact.
+                    self.messages.append({"role": "assistant", "content": final.content})
+                    if final.stop_reason == "max_tokens":
+                        emit(" (reply cut short)")
+                    break
+
+                rounds += 1
+                if rounds > MAX_TOOL_ROUNDS:
+                    raise RuntimeError("The assistant called too many tools in one turn.")
+
+                # Run every tool call and send all results back in one user message.
+                results = []
+                for block in tool_uses:
+                    content, is_error = loan_tools.run_tool(block.name, block.input, self.tool_context)
+                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": content, "is_error": is_error})
+                    if block.name == "send_loan_lead_to_telegram" and not is_error and on_event:
+                        on_event("lead_sent")
+                self.messages.append({"role": "assistant", "content": final.content})
+                self.messages.append({"role": "user", "content": results})
         except Exception:
-            self.messages.pop()  # keep history valid so the next turn still works
+            if rounds == 0:
+                # Nothing ran yet: forget this turn so the next one starts clean.
+                del self.messages[start:]
+                self.language = old_language
+            # After a tool round the history ends with valid tool results, so keep it
+            # (a lead may already have been sent and Claude should know that).
             raise
 
-        if final.stop_reason == "refusal":
-            self.messages.pop()
-            return "Sorry, I can't help with that one."
-
-        # Append the full content (not just text) so thinking blocks stay intact.
-        self.messages.append({"role": "assistant", "content": final.content})
-        return "".join(b.text for b in final.content if b.type == "text")
+        return "".join(texts)
 
 
 # ---------------------------------------------------------------- voice I/O
@@ -174,7 +253,8 @@ def main():
 
         print("Bot: ", end="", flush=True)
         try:
-            reply = bot.ask(user_text, on_text=lambda t: print(t, end="", flush=True))
+            reply = bot.ask(user_text, on_text=lambda t: print(t, end="", flush=True),
+                            on_event=lambda e: print("\n[✓ Lead sent to Telegram]", flush=True))
         except anthropic.AuthenticationError:
             print("\n[Invalid or missing API key - set ANTHROPIC_API_KEY.]\n")
             continue

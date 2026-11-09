@@ -13,6 +13,8 @@ Settings (environment variables, e.g. on your hosting service):
 """
 
 import hmac
+import base64
+import binascii
 import json
 import os
 import sys
@@ -25,6 +27,7 @@ from pathlib import Path
 
 import anthropic
 
+import speech
 from main import Chatbot
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -34,6 +37,7 @@ LANGUAGES = {"en-US": "English", "km-KH": "Khmer"}
 
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 MAX_MESSAGES_PER_HOUR = int(os.environ.get("MAX_MESSAGES_PER_HOUR", "30"))
+MAX_BODY_BYTES = 8 * 1024 * 1024  # ~60 s of recorded voice, base64-encoded
 
 # One Chatbot (conversation history) per browser session.
 sessions: dict[str, Chatbot] = {}
@@ -44,7 +48,7 @@ sessions_lock = threading.Lock()
 def get_session(session_id: str) -> tuple[Chatbot, threading.Lock]:
     with sessions_lock:
         if session_id not in sessions:
-            sessions[session_id] = Chatbot()
+            sessions[session_id] = Chatbot(source="Web chat")
             session_locks[session_id] = threading.Lock()
         return sessions[session_id], session_locks[session_id]
 
@@ -100,6 +104,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
+            if length > MAX_BODY_BYTES:
+                self.send_error(413, "Request too large")
+                return
             data = json.loads(self.rfile.read(length) or b"{}")
         except (ValueError, json.JSONDecodeError):
             self.send_error(400, "Invalid JSON")
@@ -134,6 +141,36 @@ class Handler(BaseHTTPRequestHandler):
             self.stream_reply(session_id, message, language)
             return
 
+        if self.path == "/api/tts":
+            text = str(data.get("text", "")).strip()
+            if not text:
+                self.send_error(400, "Empty text")
+                return
+            try:
+                audio = speech.text_to_speech(text, str(data.get("lang", "")))
+            except speech.SpeechError as e:
+                self.send_json(502, {"error": str(e)})
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/mpeg")
+            self.send_header("Content-Length", str(len(audio)))
+            self.end_headers()
+            self.wfile.write(audio)
+            return
+
+        if self.path == "/api/stt":
+            try:
+                wav = base64.b64decode(str(data.get("audio", "")), validate=True)
+                text = speech.speech_to_text(wav, str(data.get("lang", "")))
+            except (binascii.Error, ValueError) as e:
+                self.send_json(400, {"error": str(e)})
+                return
+            except speech.SpeechError as e:
+                self.send_json(502, {"error": str(e)})
+                return
+            self.send_json(200, {"text": text})
+            return
+
         self.send_error(404)
 
     def send_json(self, status: int, payload: dict):
@@ -151,7 +188,11 @@ class Handler(BaseHTTPRequestHandler):
         return forwarded.split(",")[0].strip() or self.client_address[0]
 
     def stream_reply(self, session_id: str, message: str, language: str | None = None):
-        """Stream the reply as plain text; errors are sent as a final line starting with \\x00."""
+        """Stream the reply as plain text.
+
+        Errors are sent as a final line starting with \\x00; events (e.g. a lead
+        reaching Telegram) are sent inline as \\x01name\\x02.
+        """
         bot, lock = get_session(session_id)
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -171,7 +212,8 @@ class Handler(BaseHTTPRequestHandler):
                     streamed.append(t)
                     write(t)
 
-                reply = bot.ask(message, on_text=on_text, language=language)
+                reply = bot.ask(message, on_text=on_text, language=language,
+                                on_event=lambda name: write(f"\x01{name}\x02"))
                 if not streamed and reply:  # e.g. the refusal message
                     write(reply)
             except (BrokenPipeError, ConnectionResetError):
