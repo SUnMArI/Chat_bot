@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Chatbot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f5f7fa;
+    --card: #ffffff;
+    --border: #d6dee8;
+    --shadow: 0 8px 24px rgba(30, 50, 80, 0.10), 0 1px 3px rgba(30, 50, 80, 0.06);
+    --text: #1f2933;
+    --muted: #7b8794;
+    --bot-bubble: #f1f4f8;
+    --user-bubble: #2f6fed;
+    --user-text: #ffffff;
+    --input-bg: #f7f9fb;
+    --accent: #2f6fed;
+    --error: #c53030;
+    --rec: #e53e3e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0f1419;
+      --card: #1a2027;
+      --border: #2e3843;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      --text: #e4e7eb;
+      --muted: #8a96a3;
+      --bot-bubble: #252d36;
+      --input-bg: #202831;
+      --error: #fc8181;
+      --rec: #fc8181;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--page);
+    color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Noto Sans Khmer", "Khmer Sangam MN", "Khmer MN", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 480px;
+    height: min(620px, calc(100vh - 32px));
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 14px 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: grid; place-items: center;
+    font-weight: 600; font-size: 14px;
+    flex-shrink: 0;
+  }
+  .title { flex: 1; min-width: 0; }
+  .title strong { display: block; font-size: 15px; }
+  .title span { font-size: 12px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icon-btn {
+    border: none; background: none; cursor: pointer;
+    color: var(--muted); padding: 6px; border-radius: 8px;
+    display: grid; place-items: center;
+  }
+  .icon-btn:hover { background: var(--bot-bubble); color: var(--text); }
+  .icon-btn.on { color: var(--accent); }
+
+  /* English / Khmer switch */
+  .lang {
+    display: flex;
+    background: var(--bot-bubble);
+    border-radius: 999px;
+    padding: 3px;
+    flex-shrink: 0;
+  }
+  .lang button {
+    border: none; background: none; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600;
+    color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .lang button[aria-pressed="true"] { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    max-width: 80%;
+    padding: 9px 14px;
+    border-radius: 16px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .msg.bot  { align-self: flex-start; background: var(--bot-bubble); border-bottom-left-radius: 4px; }
+  .msg.user { align-self: flex-end; background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 4px; }
+  .msg.error { color: var(--error); }
+
+  .empty {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+  .typing i {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+    animation: blink 1.2s infinite ease-in-out;
+  }
+  .typing i:nth-child(2) { animation-delay: .2s; }
+  .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+
+  form {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+  }
+  textarea {
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font: inherit;
+    max-height: 120px;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  button.send, button.mic {
+    border: none;
+    border-radius: 12px;
+    width: 44px;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: grid; place-items: center;
+  }
+  button.send { background: var(--accent); color: #fff; }
+  button.mic { background: var(--bot-bubble); color: var(--text); position: relative; }
+  button.mic:hover { color: var(--accent); }
+  button.mic.listening { background: var(--rec); color: #fff; }
+  button.mic.listening::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    box-shadow: 0 0 0 0 var(--rec);
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--rec) 60%, transparent); }
+    100% { box-shadow: 0 0 0 12px transparent; }
+  }
+  button:disabled { opacity: .5; cursor: default; }
+
+  /* Password screen (only when the server has APP_PASSWORD set) */
+  .card { position: relative; }
+  #lock {
+    position: absolute; inset: 0;
+    background: var(--card);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; padding: 24px;
+    text-align: center;
+  }
+  #lock[hidden] { display: none; }
+  #lock form { border: none; padding: 0; width: 100%; max-width: 280px; }
+  #lock input {
+    flex: 1; min-width: 0;
+    border: 1px solid var(--border);
+    background: var(--input-bg); color: var(--text);
+    border-radius: 12px; padding: 10px 12px;
+    font: inherit; outline: none;
+  }
+  #lock input:focus { border-color: var(--accent); }
+  #lock p { margin: 0; color: var(--muted); font-size: 14px; }
+  #lock .lock-error { color: var(--error); min-height: 1.5em; }
+  button.mic[hidden] { display: none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <div class="avatar">AI</div>
+      <div class="title">
+        <strong>AI Chatbot</strong>
+        <span id="status">Online</span>
+      </div>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en-US" aria-pressed="true">EN</button>
+        <button type="button" data-lang="km-KH" aria-pressed="false">ខ្មែរ</button>
+      </div>
+      <button class="icon-btn on" id="speaker" title="Read replies aloud" aria-label="Read replies aloud" aria-pressed="true">
+        <svg id="speaker-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+        <svg id="speaker-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6"/><path d="m17 9 6 6"/></svg>
+      </button>
+      <button class="icon-btn" id="reset" title="New conversation" aria-label="New conversation">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+    </header>
+
+    <div id="messages">
+      <div class="empty" id="empty"></div>
+    </div>
+
+    <form id="form">
+      <textarea id="input" rows="1" autofocus></textarea>
+      <button class="mic" id="mic" type="button" aria-label="Speak">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg>
+      </button>
+      <button class="send" id="send" type="submit" aria-label="Send">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+      </button>
+    </form>
+
+    <div id="lock" hidden>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <strong>AI Chatbot</strong>
+      <p id="lock-text"></p>
+      <form id="lock-form">
+        <input id="lock-input" type="password" autocomplete="current-password" aria-label="Password">
+        <button class="send" type="submit" aria-label="Unlock">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+      </form>
+      <p class="lock-error" id="lock-error"></p>
+    </div>
+  </div>
+
+<script>
+  const messagesEl = document.getElementById("messages");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const micBtn = document.getElementById("mic");
+  const speakerBtn = document.getElementById("speaker");
+  const statusEl = document.getElementById("status");
+
+  const session = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+  let busy = false;
+
+  // ------------------------------------------------------------ language
+
+  const TEXT = {
+    "en-US": {
+      hello: "👋 Hi! Type or tap the mic to talk.",
+      placeholder: "Type a message...",
+      online: "Online",
+      typing: "Typing...",
+      listening: "Listening... tap the mic to stop",
+      speaking: "Speaking...",
+      micTitle: "Speak in English",
+      noMic: "Microphone access was blocked. Allow it in the browser address bar.",
+      noRecognition: "Voice input needs Chrome or Edge.",
+      noVoice: "",
+      lockText: "Enter the password to start chatting.",
+      wrongPassword: "Wrong password.",
+      limit: "You've sent a lot of messages. Please wait a while and try again.",
+    },
+    "km-KH": {
+      hello: "👋 សួស្តី! វាយអក្សរ ឬចុចមីក្រូហ្វូនដើម្បីនិយាយ។",
+      placeholder: "វាយសារ...",
+      online: "អនឡាញ",
+      typing: "កំពុងសរសេរ...",
+      listening: "កំពុងស្តាប់... ចុចមីក្រូហ្វូនដើម្បីបញ្ឈប់",
+      speaking: "កំពុងនិយាយ...",
+      micTitle: "និយាយជាភាសាខ្មែរ",
+      noMic: "មីក្រូហ្វូនត្រូវបានបិទ។ សូមអនុញ្ញាតនៅក្នុងកម្មវិធីរុករក។",
+      noRecognition: "ការបញ្ចូលសំឡេងត្រូវការ Chrome ឬ Edge។",
+      noVoice: "No Khmer voice on this device - replies are shown as text only.",
+      lockText: "សូមបញ្ចូលពាក្យសម្ងាត់ដើម្បីចាប់ផ្តើមជជែក។",
+      wrongPassword: "ពាក្យសម្ងាត់មិនត្រឹមត្រូវ។",
+      limit: "អ្នកបានផ្ញើសារច្រើនពេក។ សូមរង់ចាំបន្តិចហើយព្យាយាមម្តងទៀត។",
+    },
+  };
+
+  let lang = localStorageGet("lang") || "en-US";
+  const t = (key) => TEXT[lang][key];
+
+  function setLang(value) {
+    lang = value;
+    localStorageSet("lang", value);
+    document.documentElement.lang = value.slice(0, 2);
+    document.querySelectorAll(".lang button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === value));
+    });
+    input.placeholder = t("placeholder");
+    micBtn.title = t("micTitle");
+    document.getElementById("lock-text").textContent = t("lockText");
+    const empty = document.getElementById("empty");
+    if (empty) empty.textContent = t("hello");
+    stopListening();
+    stopSpeaking();
+    setStatus();
+  }
+
+  document.querySelectorAll(".lang button").forEach((b) => {
+    b.addEventListener("click", () => setLang(b.dataset.lang));
+  });
+
+  function localStorageGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+  function localStorageSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+
+  // ------------------------------------------------------------ status
+
+  let statusNote = "";  // temporary message, e.g. an error
+
+  function setStatus(key) {
+    if (key) statusNote = "";
+    statusEl.textContent = statusNote || t(key || (busy ? "typing" : listening ? "listening" : "online"));
+  }
+
+  function noteStatus(text) {
+    statusNote = text;
+    statusEl.textContent = text;
+    setTimeout(() => { if (statusNote === text) { statusNote = ""; setStatus(); } }, 5000);
+  }
+
+  // ------------------------------------------------------------ chat
+
+  function addMessage(role, text) {
+    document.getElementById("empty")?.remove();
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    scrollDown();
+    return el;
+  }
+
+  function scrollDown() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function setBusy(value) {
+    busy = value;
+    sendBtn.disabled = value;
+    micBtn.disabled = value;
+    setStatus();
+  }
+
+  async function send(text) {
+    stopSpeaking();
+    addMessage("user", text);
+    const botEl = addMessage("bot", "");
+    botEl.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+    setBusy(true);
+    const replyLang = lang;
+
+    let reply = "";
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session, message: text, lang, password }),
+      });
+      if (res.status === 401) { showLock(); throw new Error(t("wrongPassword")); }
+      if (res.status === 429) throw new Error(t("limit"));
+      if (!res.ok) throw new Error("Server error " + res.status);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        reply += decoder.decode(value, { stream: true });
+        const errAt = reply.indexOf("\x00");
+        if (errAt !== -1) {
+          throw new Error(reply.slice(errAt + 1));
+        }
+        botEl.textContent = reply;
+        scrollDown();
+      }
+      if (!reply) botEl.textContent = "(no reply)";
+    } catch (err) {
+      botEl.classList.add("error");
+      botEl.textContent = "⚠️ " + (err.message || "Could not reach the server.");
+      reply = "";
+    } finally {
+      setBusy(false);
+      input.focus();
+    }
+    if (reply) speak(reply, replyLang);
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    stopListening();
+    const text = input.value.trim();
+    if (!text || busy) return;
+    input.value = "";
+    autoResize();
+    send(text);
+  });
+
+  // Enter sends, Shift+Enter makes a new line.
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  function autoResize() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  }
+  input.addEventListener("input", autoResize);
+
+  document.getElementById("reset").addEventListener("click", async () => {
+    if (busy) return;
+    stopListening();
+    stopSpeaking();
+    await fetch("/api/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session, password }),
+    }).catch(() => {});
+    messagesEl.innerHTML = '<div class="empty" id="empty"></div>';
+    document.getElementById("empty").textContent = t("hello");
+    input.focus();
+  });
+
+  // ------------------------------------------------------------ voice input
+
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
+
+  micBtn.addEventListener("click", () => {
+    if (!Recognition) { noteStatus(t("noRecognition")); return; }
+    listening ? stopListening(true) : startListening();
+  });
+
+  function startListening() {
+    if (busy) return;
+    stopSpeaking();
+    recognition = new Recognition();
+    recognition.lang = lang;
+    recognition.interimResults = true;
+    recognition.continuous = false;   // stop after the user pauses
+
+    const before = input.value ? input.value.trimEnd() + " " : "";
+    let finalText = "";
+
+    recognition.onresult = (e) => {
+      let interim = "";
+      finalText = "";
+      for (const r of e.results) {
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      input.value = before + finalText + interim;
+      autoResize();
+    };
+    recognition.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") noteStatus(t("noMic"));
+      else if (e.error !== "no-speech" && e.error !== "aborted") noteStatus("Voice error: " + e.error);
+    };
+    recognition.onend = () => {
+      const wasListening = listening;
+      setListening(false);
+      recognition = null;
+      // Auto-send what was heard when the user stops talking.
+      if (wasListening && input.value.trim()) form.requestSubmit();
+    };
+
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
+  }
+
+  // send=true: the user tapped the mic to finish, so send what was heard.
+  function stopListening(send = false) {
+    if (!recognition) return;
+    if (send) {
+      recognition.stop();     // keep the final words; onend sends them
+    } else {
+      listening = false;      // onend will not auto-send
+      recognition.abort();    // drop any late results
+    }
+  }
+
+  function setListening(value) {
+    listening = value;
+    micBtn.classList.toggle("listening", value);
+    micBtn.setAttribute("aria-pressed", String(value));
+    setStatus();
+  }
+
+  // ------------------------------------------------------------ voice output
+
+  let speakerOn = localStorageGet("speaker") !== "off";
+
+  function renderSpeaker() {
+    speakerBtn.classList.toggle("on", speakerOn);
+    speakerBtn.setAttribute("aria-pressed", String(speakerOn));
+    document.getElementById("speaker-on").hidden = !speakerOn;
+    document.getElementById("speaker-off").hidden = speakerOn;
+  }
+
+  speakerBtn.addEventListener("click", () => {
+    speakerOn = !speakerOn;
+    localStorageSet("speaker", speakerOn ? "on" : "off");
+    if (!speakerOn) stopSpeaking();
+    renderSpeaker();
+  });
+
+  function findVoice(code) {
+    const voices = speechSynthesis.getVoices();
+    const base = code.slice(0, 2).toLowerCase();
+    return voices.find((v) => v.lang.replace("_", "-") === code)
+        || voices.find((v) => v.lang.toLowerCase().startsWith(base));
+  }
+
+  function speak(text, code) {
+    if (!speakerOn || !("speechSynthesis" in window)) return;
+    const voice = findVoice(code);
+    if (!voice && code !== "en-US") {
+      noteStatus(TEXT[code].noVoice);
+      return;
+    }
+    stopSpeaking();
+    // Speak sentence by sentence; Chrome cuts off very long utterances.
+    const parts = (text.match(/[^.!?។៕\n]+[.!?។៕]*\s*/g) || [text]).filter((p) => p.trim());
+    parts.forEach((part, i) => {
+      const u = new SpeechSynthesisUtterance(part);
+      u.lang = code;
+      if (voice) u.voice = voice;
+      if (i === 0) u.onstart = () => setStatus("speaking");
+      if (i === parts.length - 1) u.onend = () => setStatus();
+      speechSynthesis.speak(u);
+    });
+  }
+
+  function stopSpeaking() {
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+  }
+
+  // Voices load asynchronously in some browsers.
+  if ("speechSynthesis" in window) speechSynthesis.getVoices();
+
+  // ------------------------------------------------------------ password
+
+  // Remembered on this device so visitors don't retype it every time.
+  let password = localStorageGet("password") || "";
+  const lockEl = document.getElementById("lock");
+  const lockInput = document.getElementById("lock-input");
+  const lockError = document.getElementById("lock-error");
+
+  function showLock(message = "") {
+    stopListening();
+    stopSpeaking();
+    lockError.textContent = message;
+    lockEl.hidden = false;
+    lockInput.value = "";
+    lockInput.focus();
+  }
+
+  // Returns true if the server accepts `password` (or needs none).
+  async function checkPassword() {
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      return res.status !== 401;
+    } catch {
+      return true;  // server unreachable: let the chat show the error
+    }
+  }
+
+  document.getElementById("lock-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    password = lockInput.value;
+    if (await checkPassword()) {
+      localStorageSet("password", password);
+      lockEl.hidden = true;
+      input.focus();
+    } else {
+      showLock(t("wrongPassword"));
+    }
+  });
+
+  // ------------------------------------------------------------ start
+
+  if (!Recognition) micBtn.title = TEXT[lang].noRecognition;
+  renderSpeaker();
+  setLang(lang);
+  checkPassword().then((ok) => { if (!ok) showLock(); });
+</script>
+</body>
+</html>

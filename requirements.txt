@@ -1,0 +1,3 @@
+# Web chatbot (what the hosting service installs)
+anthropic
+python-dotenv

@@ -1,0 +1,6 @@
+# Extra packages for terminal voice mode (python main.py, then /voice).
+# Install locally with:  pip install -r requirements-voice.txt
+-r requirements.txt
+sounddevice
+SpeechRecognition
+pyttsx3; platform_system != "Darwin"
